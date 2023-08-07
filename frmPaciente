@@ -1,0 +1,224 @@
+using TUP_PI_Recuperatorio_1W4A.Datos;
+using TUP_PI_Recuperatorio_1W4A.Negocio;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+//CURSO – LEGAJO – APELLIDO – NOMBRE
+
+namespace TUP_PI_Recuperatorio_1W4A
+{
+    public partial class frmPacientes : Form
+    {
+        private AccesoDatos oBD;
+        private List<Paciente> lPacientes;
+        public frmPacientes()
+        {
+            InitializeComponent();
+            oBD = new AccesoDatos();
+            lPacientes = new List<Paciente>();
+        }
+
+        private void frmPacientes_Load(object sender, EventArgs e)
+        {
+            cargarCombo();
+            cargarLista();
+            habilitar(false);
+
+        }
+        private void cargarCombo()
+        {
+            DataTable tabla = oBD.consultarBD("SELECT * FROM ObrasSociales");
+            cboObraSocial.DataSource = tabla;
+            cboObraSocial.DisplayMember = "nombreObraSocial";
+            cboObraSocial.ValueMember = "idObraSocial";
+            cboObraSocial.DropDownStyle = ComboBoxStyle.DropDownList;
+        }
+
+        private bool validarDatos()
+        {
+            if (txtNroHC.Text == "")
+            {
+                MessageBox.Show("Debe ingresar una historia clinica");
+                txtNroHC.Focus();
+                return false;
+            }
+            if (txtNombre.Text == "")
+            {
+                MessageBox.Show("Debe ingresar un nombre");
+                txtNombre.Focus();
+                return false;
+            }
+            if (cboObraSocial.SelectedIndex == -1)
+            {
+                MessageBox.Show("Debe ingresar una obra social");
+                cboObraSocial.Focus();
+                return false;
+            }
+            if (!rbtFemenino.Checked && !rbtMasculino.Checked)
+            {
+                MessageBox.Show("Debe seleccionar un sexo");
+                rbtFemenino.Focus();
+                return false;
+            }
+
+            if (DateTime.Today.Year - dtpFechaNacimiento.Value.Year < 18)
+            {
+                MessageBox.Show("No se puede registrar una persona menor a 18 años");
+                dtpFechaNacimiento.Focus();
+                return false;
+            }
+            return true;
+
+        }
+        private bool existe(Paciente nuevo)
+        {
+            for (int i = 0; i < lPacientes.Count; i++)
+            {
+                if (lPacientes[i].NumeroHC == nuevo.NumeroHC)
+                    return true;
+            }
+            return false;
+        }
+        private void cargarLista()
+        {
+            lPacientes.Clear();
+            lstPacientes.Items.Clear();
+            DataTable tabla = oBD.consultarBD("Select * FROM Pacientes");
+
+            foreach (DataRow fila in tabla.Rows)
+            {
+                Paciente p = new Paciente();
+                p.NumeroHC = Convert.ToInt32(fila["numeroHC"]);
+                p.Nombre = Convert.ToString(fila["nombre"]);
+                p.FechaNacimiento = Convert.ToDateTime(fila["fechaNacimiento"]);
+                p.Sexo = Convert.ToInt32(fila["sexo"]);
+                p.ObraSocial = (int)(fila["obraSocial"]);
+                lPacientes.Add(p);
+                lstPacientes.Items.Add(p.ToString());
+
+            }
+
+        }
+        private void habilitar(bool v)
+        {
+            txtNroHC.Enabled = v;
+            txtNombre.Enabled = v;
+            cboObraSocial.Enabled = v;
+            rbtFemenino.Enabled = v;
+            rbtMasculino.Enabled = v;
+            dtpFechaNacimiento.Enabled = v;
+            btnGrabar.Enabled = v;
+            btnNuevo.Enabled = !v;
+            btnSalir.Enabled = !v;
+            lstPacientes.Enabled = !v;
+        }
+
+        private void limpiar()
+        {
+            txtNroHC.Text = "";
+            txtNombre.Text = "";
+            cboObraSocial.SelectedIndex = -1;
+            rbtMasculino.Checked = false;
+            rbtFemenino.Checked = false;
+            dtpFechaNacimiento.Value = DateTime.Today;
+        }
+
+        private void btnGrabar_Click(object sender, EventArgs e)
+        {
+            if (validarDatos())
+            {
+                Paciente p = new Paciente();
+                p.NumeroHC = int.Parse(txtNroHC.Text);
+                p.Nombre = txtNombre.Text;
+                p.ObraSocial = Convert.ToInt32(cboObraSocial.SelectedValue);
+                if (rbtFemenino.Checked)
+                    p.Sexo = 1;
+                else
+                    p.Sexo = 2;
+                p.FechaNacimiento = dtpFechaNacimiento.Value;
+
+                if (!existe(p))
+                {
+                    string insertSQL = "INSERT INTO Pacientes VALUES (@nombre,@obraSocial,@sexo,@fechaNacimiento)";
+
+                    List<Parametro> lParametros = new List<Parametro>();
+                    //lParametros.Add(new Parametro("@numeroHC", p.NumeroHC));
+                    lParametros.Add(new Parametro("@nombre", p.Nombre));
+                    lParametros.Add(new Parametro("@obraSocial", p.ObraSocial));
+                    lParametros.Add(new Parametro("@sexo", p.Sexo));
+                    lParametros.Add(new Parametro("@fechaNacimiento", p.FechaNacimiento));
+
+                    if (oBD.actualizarBD(insertSQL, lParametros) > 0)
+                    {
+                        MessageBox.Show("Se inserto con exito un nuevo Paciente!");
+                        cargarLista();
+                    }
+
+                }
+                else
+                {
+                    MessageBox.Show("Este paciente ya existe!");
+
+
+
+                    //string upDateSQL = "UPDATE Pacientes SET nombre=@nombre, obraSocial=@obraSocial, sexo=@sexo, fechaNacimiento=@fechaNacimiento";
+
+                    //List<Parametro> lParametros = new List<Parametro>();
+                    //lParametros.Add(new Parametro("@numeroHC", p.NumeroHC));
+                    //lParametros.Add(new Parametro("@nombre", p.Nombre));
+                    //lParametros.Add(new Parametro("@obraSocial", p.ObraSocial));
+                    //lParametros.Add(new Parametro("@sexo", p.Sexo));
+                    //lParametros.Add(new Parametro("@fechaNacimiento", p.FechaNacimiento));
+
+                    //if (oBD.actualizarBD(upDateSQL, lParametros) > 0)
+                    //{
+                    //    MessageBox.Show("Se modifico con exito el Paciente seleccionado!");
+                    //    cargarLista();
+                    //}
+
+                }
+                habilitar(false);
+            }
+
+        }
+        private void cargarCampos (int posicion)
+        {
+            txtNroHC.Text = lPacientes[posicion].NumeroHC.ToString();
+            txtNombre.Text = lPacientes[posicion].Nombre;
+            cboObraSocial.SelectedValue = lPacientes[posicion].ObraSocial;
+            if (lPacientes[posicion].Sexo == 1)
+                rbtFemenino.Checked = true;
+            else
+                rbtMasculino.Checked = true;
+
+            dtpFechaNacimiento.Value = lPacientes[posicion].FechaNacimiento;
+        }
+
+        private void lstPacientes_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            cargarCampos(lstPacientes.SelectedIndex);
+        }
+
+        private void btnSalir_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("¿Seguro que desea salir?", "Saliendo",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                Close();
+        }
+
+        private void btnNuevo_Click(object sender, EventArgs e)
+        {
+            habilitar(true);
+            limpiar();
+            txtNroHC.Focus();
+        }
+    }
+}
