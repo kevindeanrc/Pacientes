@@ -1,0 +1,21 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace TUP_PI_Recuperatorio_1W4A.Datos
+{
+    internal class Parametro
+    {
+        public Parametro(string nombre, Object valor)
+        {
+            Nombre = nombre;
+            Valor = valor;
+        }
+        public string Nombre { get; set; }
+        public Object Valor { get; set; }
+
+
+    }
+}
